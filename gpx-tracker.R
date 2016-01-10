@@ -14,14 +14,14 @@
 ################################################################################
 
 # TODO: Replace the shifting via lag function
-#       Show multiple Tracks
-#       Combine all tracks in one dataset
 #       add tableoverview of all tracks
 #       select tracks via table
 #       add information about total distance, date, speed
 #       add css
 #       add elevation plot
 #       add speed plot
+#       export name out of GPX
+#       export activity type out of GPX
 
 ### Miscellaneous --------------------------------------------------------------
 
@@ -29,26 +29,21 @@ library(leaflet)       # interactive Javascript maps
 #library(sp)            # spatial operations
 library(lubridate)     # datetime operatings
 library(ggplot2)       # general plotting
-#library(rgdal)         # importing GPX files
-library(XML)           # importing XML files
-#library(raster)        # pointDistance
-#library(OpenStreetMap) # Openstreetmap data
+library(rgdal)         # importing GPX files
 
 ### Import data ----------------------------------------------------------------
 
 idcounter <- 1
 
 importGPX <- function(file){
-  # Parse the GPX file
-  gpxfile <- htmlTreeParse(file, 
-                           error = function(...) {}, useInternalNodes = TRUE)
-  # Get all elevations, times and coordinates via the respective xpath
-  elevations <- as.numeric(xpathSApply(gpxfile, path = "//trkpt/ele", xmlValue))
-  times      <- ymd_hms(xpathSApply(gpxfile, path = "//trkpt/time", xmlValue))
-  coords     <- xpathSApply(gpxfile, path = "//trkpt", xmlAttrs)
-  # Extract latitude and longitude from the coordinates
-  lat <- as.numeric(coords["lat", ])
-  lon <- as.numeric(coords["lon", ])
+  # Import the GPX file
+  trackpoints <- readOGR(file, layer = "track_points", verbose = FALSE)
+  track       <- readOGR(file, layer = "tracks",       verbose = FALSE)
+  # Get all elevations, times and coordinates
+  elevations <- trackpoints@data$ele
+  times      <- ymd_hms(trackpoints@data$time)
+  lat <- trackpoints@coords[,2]
+  lon <- trackpoints@coords[,1]
   # Put everything in a dataframe and get rid of old variables
   geodf <- data.frame(id = idcounter, 
                       lat = lat, 
