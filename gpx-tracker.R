@@ -16,12 +16,11 @@
 # TODO: Replace the shifting via lag function
 #       add tableoverview of all tracks
 #       select tracks via table
-#       add information about total distance, date, speed
+#       add information about total distance, avg_speed
 #       add css
 #       add elevation plot
 #       add speed plot
-#       export name out of GPX
-#       export activity type out of GPX
+#       ShinyDashboard
 
 ### Miscellaneous --------------------------------------------------------------
 
@@ -39,27 +38,39 @@ importGPX <- function(file){
   # Import the GPX file
   trackpoints <- readOGR(file, layer = "track_points", verbose = FALSE)
   track       <- readOGR(file, layer = "tracks",       verbose = FALSE)
+  # Metadata
+  name = track@data$name
+  type = track@data$type
+  date = min(as.Date(ymd_hms(trackpoints@data$time)))
   # Get all elevations, times and coordinates
   elevations <- trackpoints@data$ele
   times      <- ymd_hms(trackpoints@data$time)
   lat <- trackpoints@coords[,2]
   lon <- trackpoints@coords[,1]
   # Put everything in a dataframe and get rid of old variables
-  geodf <- data.frame(id = idcounter, 
+  geodf <- data.frame(id = idcounter,
                       lat = lat, 
                       lon = lon, 
                       ele = elevations, 
                       time = times)
-  idcounter <<- idcounter + 1
+
+  metadf <- data.frame(id = idcounter,
+                       name = name,
+                       date = date,
+                       type = type)
   
-  return(geodf)
+  return(list(geodf=geodf, metadf=metadf))
 }
 
 for(filename in dir("data")){
   if (!exists("GPX")){
-    GPX <- importGPX(file = file.path("data",filename))
+    GPX <- importGPX(file = file.path("data",filename))$geodf
+    GPX.meta <- importGPX(file = file.path("data",filename))$metadf
+    idcounter <<- idcounter + 1
   } else {
-    GPX <- rbind(GPX,importGPX(file = file.path("data",filename)))
+    GPX <- rbind(GPX,importGPX(file = file.path("data",filename))$geodf)
+    GPX.meta <- rbind(GPX.meta,importGPX(file = file.path("data",filename))$metadf)
+    idcounter <<- idcounter + 1
   }
 }
 
