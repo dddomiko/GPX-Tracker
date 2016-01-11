@@ -5,7 +5,7 @@
 # author:      Dominik Koch
 # version:     0.1
 # created at:  05.01.2016
-# last update: 10.01.2016
+# last update: 12.01.2016
 #
 # sources:      
 #   http://mhermans.net/hiking-gpx-r-leaflet.html
@@ -18,8 +18,8 @@
 #       select tracks via table
 #       add information avg_speed
 #       add css
-#       add elevation plot
-#       add speed plot
+#       add elevation plot (interactive)
+#       add speed plot (interactive)
 #       ShinyDashboard
 #       Focus on track
 
@@ -46,7 +46,7 @@ importGPX <- function(file){
   date = min(as.Date(ymd_hms(trackpoints@data$time)))
   distance <- sum(spDists(trackpoints, segments = TRUE))
   # Get all elevations, times and coordinates
-  elevations <- trackpoints@data$ele
+  elevations <- lowess(trackpoints@data$ele, f = 0.01)$y 
   times      <- ymd_hms(trackpoints@data$time)
   lat <- trackpoints@coords[,2]
   lon <- trackpoints@coords[,1]
@@ -80,7 +80,8 @@ for(filename in dir("data")){
 
 ### KPIs -----------------------------------------------------------------------
 
-
+# file <- file.path("data","Chiemsee_20150822.gpx")
+# trackpoints <- readOGR(file, layer = "track_points", verbose = FALSE)
 
 ### Preprocess data ------------------------------------------------------------
 
@@ -136,16 +137,17 @@ for(filename in dir("data")){
 # 
 # p <- ggplot(data = as.data.frame(trackpoints), aes(x = time, y = ele_new))
 # p + geom_point() + labs(x = "Time", y = "Elevations (meters)")
-# 
-# 
+
+
 # ### Smooth data ----------------------------------------------------------------
-# 
-# # Plot elevations and smoother
-# plot(geodf$ele, type = "l", bty = "n", xaxt = "n", ylab = "Elevation", xlab = "", col = "grey40")
-# lines(geodf$lowess.ele, col = "red", lwd = 3)
-# legend(x = "bottomright", legend = c("GPS elevation", "LOWESS elevation"), col = c("grey40", "red"), 
-#        lwd = c(1, 3), bty = "n")
-# 
+
+geodf <- GPX[GPX$id == 2,]
+
+# Plot elevations and smoother
+plot(geodf$ele, type = "l", bty = "n", xaxt = "n", ylab = "Elevation", xlab = "", col = "grey40")
+legend(x = "bottomright", legend = c("GPS elevation", "LOWESS elevation"), col = c("grey40", "red"), 
+       lwd = c(1, 3), bty = "n")
+
 # # Plot speeds and smoother
 # plot(geodf$speed.km.per.h, type = "l", bty = "n", xaxt = "n", ylab = "Speed (km/h)", xlab = "", col = "grey40")
 # lines(geodf$lowess.speed, col = "blue", lwd = 3)
