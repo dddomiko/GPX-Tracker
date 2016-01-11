@@ -16,19 +16,21 @@
 # TODO: Replace the shifting via lag function
 #       add tableoverview of all tracks
 #       select tracks via table
-#       add information about total distance, avg_speed
+#       add information avg_speed
 #       add css
 #       add elevation plot
 #       add speed plot
 #       ShinyDashboard
+#       Focus on track
 
 ### Miscellaneous --------------------------------------------------------------
 
 library(leaflet)       # interactive Javascript maps
-#library(sp)            # spatial operations
 library(lubridate)     # datetime operatings
 library(ggplot2)       # general plotting
 library(rgdal)         # importing GPX files
+library(sp)            # spatial operations
+library(dplyr)         # data munging operations
 
 ### Import data ----------------------------------------------------------------
 
@@ -42,6 +44,7 @@ importGPX <- function(file){
   name = track@data$name
   type = track@data$type
   date = min(as.Date(ymd_hms(trackpoints@data$time)))
+  distance <- sum(spDists(trackpoints, segments = TRUE))
   # Get all elevations, times and coordinates
   elevations <- trackpoints@data$ele
   times      <- ymd_hms(trackpoints@data$time)
@@ -57,7 +60,8 @@ importGPX <- function(file){
   metadf <- data.frame(id = idcounter,
                        name = name,
                        date = date,
-                       type = type)
+                       type = type,
+                       dist = distance)
   
   return(list(geodf=geodf, metadf=metadf))
 }
@@ -74,11 +78,12 @@ for(filename in dir("data")){
   }
 }
 
+### KPIs -----------------------------------------------------------------------
+
+
+
 ### Preprocess data ------------------------------------------------------------
 
-
-# Calculate total distance
-#kpi.distance <- spDists(trackpoints, segments = TRUE)
 
 # # Calculate distance and speed between successive positions
 # 
@@ -154,25 +159,6 @@ for(filename in dir("data")){
 
 ### interactive track Plot -----------------------------------------------------
 
-GPXfile <- "data\\Chiemsee_20150822.gpx"
-track <- readOGR(GPXfile, layer = "tracks", verbose = FALSE)
-leaflet() %>% addTiles() %>% addPolylines(data = track)
-
-library(dplyr)
-
-categories = LETTERS[1:(idcounter-1)]
-RdYlBu = colorFactor("RdYlBu", domain = categories)
-# m %>% addCircleMarkers(~lng, ~lat, radius = ~size,
-#                        color = ~RdYlBu(category), fillOpacity = 0.5)
-GPX$category <- LETTERS[GPX$id]
-
-#GPX %>% group_by(id) %>% leaflet() %>% addTiles() %>% addPolylines(~lon, ~lat, color = ~RdYlBu(category))
-#leaflet(GPX) %>% addTiles() %>% addCircleMarkers(~lon, ~lat, color = ~RdYlBu(category), radius = .1)
-
-
-
-### ----------------------------------------------------------------------------
-
 track.colors <- colorFactor(rainbow(n=nrow(GPX.meta)), GPX.meta$id)
 
 m <- leaflet() %>% addTiles()
@@ -183,67 +169,66 @@ m
 
 ### ----------------------------------------------------------------------------
 
-
-leaflet() %>% addTiles() %>% 
-  addPolylines(data = GPX[GPX$id == 1,],~lon, ~lat, color = "blue") %>% 
-  addPolylines(data = GPX[GPX$id == 2,],~lon, ~lat, color = "red", group = "Photo markers") %>% 
-  
-  addLayersControl(position = "bottomleft", 
-                   baseGroups = c("Road map", "Topographical", "Satellite", "Watercolor"), 
-                   overlayGroups = c("Hiking routes", "Photo markers"), 
-                   options = layersControlOptions(collapsed = FALSE))
-
-markers <- trackpoints[c(1,nrow(trackpoints)),]
-
-
-# https://mapicons.mapsmarker.com
-iconStart <- makeIcon("images/cycling.png", 
-                      "images/cycling.png", 45, 45,
-                      iconAnchorX = 22.5,
-                      iconAnchorY = 45)
-
-iconFinish <- makeIcon("images/finish.png", 
-                       "images/finish.png", 45, 45,
-                       iconAnchorX = 22.5,
-                       iconAnchorY = 45)
-
-iconRestaurant <- makeIcon("images/restaurant.png", 
-                           "images/restaurant.png", 45, 45,
-                           iconAnchorX = 22.5,
-                           iconAnchorY = 45)
-
-m <- leaflet() %>% 
-  # Add tiles
-  addProviderTiles("OpenStreetMap.Mapnik", group = "Road map") %>% 
-  addProviderTiles("Thunderforest.Landscape", group = "Topographical") %>% 
-  addProviderTiles("Esri.WorldImagery", group = "Satellite") %>% 
-  addProviderTiles("Stamen.Watercolor", group = "Watercolor") %>% 
-  
-  
-  addLegend(position = "bottomright", 
-            opacity = 0.4, 
-            colors = c("blue","red"),
-            labels = c("ourtward journey","return journey"),
-            title = "Neubiberg - Langbuergner See") %>% 
-  
-  # Layers control
-  addLayersControl(position = "bottomleft", 
-                   baseGroups = c("Road map", "Topographical", "Satellite", "Watercolor"), 
-                   overlayGroups = c("Hiking routes", "Photo markers"), 
-                   options = layersControlOptions(collapsed = FALSE)) %>% 
-  
-  addPolylines(data = track, color = "blue", group = "Hiking routes") %>%
-  addMarkers(data = markers[1,], 
-             lng = ~ markers$coords.x1[1], 
-             lat = ~ markers$coords.x2[1], 
-             popup = markers$time[1],
-             icon = iconStart, group = "Photo markers") %>%
-  addMarkers(data = markers[2,], 
-             lng = ~ markers$coords.x1[2], 
-             lat = ~ markers$coords.x2[2], 
-             popup = markers$time[2],
-             icon = iconFinish, group = "Photo markers")
-
-m
+# leaflet() %>% addTiles() %>% 
+#   addPolylines(data = GPX[GPX$id == 1,],~lon, ~lat, color = "blue") %>% 
+#   addPolylines(data = GPX[GPX$id == 2,],~lon, ~lat, color = "red", group = "Photo markers") %>% 
+#   
+#   addLayersControl(position = "bottomleft", 
+#                    baseGroups = c("Road map", "Topographical", "Satellite", "Watercolor"), 
+#                    overlayGroups = c("Hiking routes", "Photo markers"), 
+#                    options = layersControlOptions(collapsed = FALSE))
+# 
+# markers <- trackpoints[c(1,nrow(trackpoints)),]
+# 
+# 
+# # https://mapicons.mapsmarker.com
+# iconStart <- makeIcon("images/cycling.png", 
+#                       "images/cycling.png", 45, 45,
+#                       iconAnchorX = 22.5,
+#                       iconAnchorY = 45)
+# 
+# iconFinish <- makeIcon("images/finish.png", 
+#                        "images/finish.png", 45, 45,
+#                        iconAnchorX = 22.5,
+#                        iconAnchorY = 45)
+# 
+# iconRestaurant <- makeIcon("images/restaurant.png", 
+#                            "images/restaurant.png", 45, 45,
+#                            iconAnchorX = 22.5,
+#                            iconAnchorY = 45)
+# 
+# m <- leaflet() %>% 
+#   # Add tiles
+#   addProviderTiles("OpenStreetMap.Mapnik", group = "Road map") %>% 
+#   addProviderTiles("Thunderforest.Landscape", group = "Topographical") %>% 
+#   addProviderTiles("Esri.WorldImagery", group = "Satellite") %>% 
+#   addProviderTiles("Stamen.Watercolor", group = "Watercolor") %>% 
+#   
+#   
+#   addLegend(position = "bottomright", 
+#             opacity = 0.4, 
+#             colors = c("blue","red"),
+#             labels = c("ourtward journey","return journey"),
+#             title = "Neubiberg - Langbuergner See") %>% 
+#   
+#   # Layers control
+#   addLayersControl(position = "bottomleft", 
+#                    baseGroups = c("Road map", "Topographical", "Satellite", "Watercolor"), 
+#                    overlayGroups = c("Hiking routes", "Photo markers"), 
+#                    options = layersControlOptions(collapsed = FALSE)) %>% 
+#   
+#   addPolylines(data = track, color = "blue", group = "Hiking routes") %>%
+#   addMarkers(data = markers[1,], 
+#              lng = ~ markers$coords.x1[1], 
+#              lat = ~ markers$coords.x2[1], 
+#              popup = markers$time[1],
+#              icon = iconStart, group = "Photo markers") %>%
+#   addMarkers(data = markers[2,], 
+#              lng = ~ markers$coords.x1[2], 
+#              lat = ~ markers$coords.x2[2], 
+#              popup = markers$time[2],
+#              icon = iconFinish, group = "Photo markers")
+# 
+# m
 
 
