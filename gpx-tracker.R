@@ -154,7 +154,6 @@ for(filename in dir("data")){
 
 ### interactive track Plot -----------------------------------------------------
 
-library(rgdal)
 GPXfile <- "data\\Chiemsee_20150822.gpx"
 track <- readOGR(GPXfile, layer = "tracks", verbose = FALSE)
 leaflet() %>% addTiles() %>% addPolylines(data = track)
@@ -174,9 +173,13 @@ GPX$category <- LETTERS[GPX$id]
 
 ### ----------------------------------------------------------------------------
 
+track.colors <- colorFactor(rainbow(n=nrow(GPX.meta)), GPX.meta$id)
+
 m <- leaflet() %>% addTiles()
-m <- m %>% addPolylines(data = GPX[GPX$id == 1,],~lon, ~lat, color = "blue")
-m <- m %>% addPolylines(data = GPX[GPX$id == 2,],~lon, ~lat, color = "red", group = "Photo markers")
+for(i in GPX.meta$id){
+  m <- m %>% addPolylines(data = GPX[GPX$id == i,],~lon, ~lat, color = track.colors(i)) 
+}
+m
 
 ### ----------------------------------------------------------------------------
 
