@@ -22,6 +22,8 @@
 #       add speed plot (interactive)
 #       ShinyDashboard
 #       Focus on track
+#       Ziel: 1000 km Radln, xx km laufen ....
+
 
 ### Miscellaneous --------------------------------------------------------------
 
@@ -68,12 +70,14 @@ importGPX <- function(file){
 
 for(filename in dir("data")){
   if (!exists("GPX")){
-    GPX <- importGPX(file = file.path("data",filename))$geodf
-    GPX.meta <- importGPX(file = file.path("data",filename))$metadf
+    tmp <- importGPX(file = file.path("data",filename))
+    GPX <- tmp$geodf
+    GPX.meta <- tmp$metadf
     idcounter <<- idcounter + 1
   } else {
-    GPX <- rbind(GPX,importGPX(file = file.path("data",filename))$geodf)
-    GPX.meta <- rbind(GPX.meta,importGPX(file = file.path("data",filename))$metadf)
+    tmp <- importGPX(file = file.path("data",filename))
+    GPX <- rbind(GPX,tmp$geodf)
+    GPX.meta <- rbind(GPX.meta,tmp$metadf)
     idcounter <<- idcounter + 1
   }
 }
