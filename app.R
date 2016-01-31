@@ -1,3 +1,27 @@
+################################################################################
+#
+# GPX-Tracker
+#
+# author:      Dominik Koch
+# version:     0.2
+# created at:  05.01.2016
+# last update: 31.01.2016
+#
+# sources:      
+#   http://mhermans.net/hiking-gpx-r-leaflet.html
+#   http://www.r-bloggers.com/stay-on-track-plotting-gps-tracks-with-r/
+#
+################################################################################
+
+# TODO: Replace the shifting via lag function
+#       add tableoverview of all tracks
+#       add information avg_speed
+#       add css
+#       add elevation plot (interactive)
+#       add speed plot (interactive)
+#       Ziel: 1000 km Radln, xx km laufen ....
+#       add break markers
+
 library(shiny)
 library(shinydashboard)
 
@@ -57,6 +81,23 @@ for(filename in dir("data")){
   }
 }
 
+# Define maps Markers
+# https://mapicons.mapsmarker.com
+iconStart <- makeIcon("www/cycling.png", 
+                      "www/cycling.png", 45, 45,
+                      iconAnchorX = 22.5,
+                      iconAnchorY = 45)
+
+iconFinish <- makeIcon("www/finish.png", 
+                       "www/finish.png", 45, 45,
+                       iconAnchorX = 22.5,
+                       iconAnchorY = 45)
+
+iconRestaurant <- makeIcon("www/restaurant.png", 
+                           "www/restaurant.png", 45, 45,
+                           iconAnchorX = 22.5,
+                           iconAnchorY = 45)
+
 ### ui -------------------------------------------------------------------------
 
 ui <- dashboardPage(skin = "yellow",
@@ -100,7 +141,8 @@ server <- function(input, output) {
   ## Leaflet Map ---------------------------------------------------------------
   output$gpx_map <- renderLeaflet({
     
-    if(length(input$DT_rows_selected)>0){
+    # Subsetting data based on DataTable selection
+    if(length(input$DT_rows_selected) > 0){
       GPX.meta.subset <- GPX.meta[GPX.meta$id %in% input$DT_rows_selected,]
       GPX.subset <- GPX[GPX$id %in% input$DT_rows_selected,]
     } else {
@@ -108,13 +150,58 @@ server <- function(input, output) {
       GPX.subset <- GPX
     }
     
+    # Calculate Marker position
+    if(length(input$DT_rows_selected) == 1){
+      markers <- GPX.subset[c(1,nrow(GPX.subset)),]
+    }
     
+    # Generate one color per track
     track.colors <- colorFactor(rainbow(n=nrow(GPX.meta.subset)), GPX.meta.subset$id)
     
+    # Map setup
     m <- leaflet() %>% addTiles()
+    
+    # Tracks
     for(i in GPX.meta.subset$id){
-      m <- m %>% addPolylines(data = GPX.subset[GPX.subset$id == i,],~lon, ~lat, color = track.colors(i)) 
+      m <- m %>% addPolylines(data = GPX.subset[GPX.subset$id == i,],
+                              ~lon, ~lat, color = track.colors(i), group = "Tracks") 
     }
+    
+    # Layer controls
+    m <- m %>%  addLayersControl(position = "bottomleft", 
+                                 baseGroups = c("Road map", "Topographical", "Satellite", "Watercolor"), 
+                                 overlayGroups = c("Tracks", "Markers"), 
+                                 options = layersControlOptions(collapsed = TRUE))
+    
+    # Legend
+#     m <- m %>% addLegend(position = "bottomright", 
+#                          opacity = 0.4, 
+#                          colors = c("blue","red"),
+#                          labels = c("ourtward journey","return journey"),
+#                          title = "Neubiberg - Langbuergner See")
+    
+    # Tiles
+    m <- m %>% 
+      addProviderTiles("OpenStreetMap.Mapnik",    group = "Road map") %>% 
+      addProviderTiles("Thunderforest.Landscape", group = "Topographical") %>% 
+      addProviderTiles("Esri.WorldImagery",       group = "Satellite") %>% 
+      addProviderTiles("Stamen.Watercolor",       group = "Watercolor")
+    
+    # Markers
+    if(length(input$DT_rows_selected) == 1){
+      m <- m %>%   
+        addMarkers(data = markers[1,], 
+                   lng = ~ markers$lon[1], 
+                   lat = ~ markers$lat[1], 
+                   popup = markers$time[1],
+                   icon = iconStart, group = "Markers") %>%
+        addMarkers(data = markers[2,], 
+                   lng = ~ markers$lon[2], 
+                   lat = ~ markers$lat[2], 
+                   popup = markers$time[2],
+                   icon = iconFinish, group = "Markers")
+    }
+    
     m
   })
   
