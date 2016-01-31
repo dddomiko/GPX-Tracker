@@ -121,7 +121,8 @@ server <- function(input, output) {
   ## Data table ----------------------------------------------------------------
   output$DT = renderDataTable(
     GPX.meta, options = list(lengthChange = FALSE), rownames = FALSE,
-    selection = 'single'
+    selection = 'single',
+    server = FALSE
   )
   
   ## TMP - delete --------------------------------------------------------------
